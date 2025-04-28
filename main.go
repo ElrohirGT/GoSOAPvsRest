@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -106,12 +107,41 @@ type WeatherReport struct {
 	Condition   string  `json:"condition" xml:"condition"`
 }
 
+func marshallWeatherRequest(report WeatherReport) ([]byte, error) {
+	bytes, err := xml.Marshal(report)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return bytes, nil
+}
+
+func encodeWeatherRequest(report WeatherReport) ([]byte, error) {
+
+	buff := bytes.NewBuffer([]byte{})
+	encoder := xml.NewEncoder(buff)
+
+	err := encoder.Encode(report)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return buff.Bytes(), nil
+}
+
 func postWeatherReport(report WeatherReport) error {
 	// Using marshal/unmarshall
-	bytes, err := xml.Marshal(report)
+	// bytes, err := marshallWeatherRequest(report)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// Using encode/decode
+	bytes, err := encodeWeatherRequest(report)
 	if err != nil {
 		return err
 	}
+
 	log.Default().Printf("Sending bytes to SOAP: %s\n", string(bytes))
 
 	time.Sleep(3 * time.Second)
@@ -137,6 +167,16 @@ func decodeWeatherResponse(response string) ([]WeatherReport, error) {
 	return reports, nil
 }
 
+func unmarshallWeatherResponse(response string) ([]WeatherReport, error) {
+	var reports []WeatherReport
+	err := json.Unmarshal([]byte(response), &reports)
+	if err != nil {
+		return []WeatherReport{}, err
+	}
+
+	return reports, nil
+}
+
 func getWeatherReport(city string) (WeatherReport, error) {
 	time.Sleep(2 * time.Second)
 	shouldFail := rand.Float32() < 0.5
@@ -146,13 +186,16 @@ func getWeatherReport(city string) (WeatherReport, error) {
 	}
 
 	// Using encode/decode
-	reports, err := decodeWeatherResponse(JSON_RESPONSE)
+	// reports, err := decodeWeatherResponse(JSON_RESPONSE)
+	// if err != nil {
+	// 	return WeatherReport{}, err
+	// }
+
+	// Using marshal/Unmarshall
+	reports, err := unmarshallWeatherResponse(JSON_RESPONSE)
 	if err != nil {
 		return WeatherReport{}, err
 	}
-
-	// Using marshal/Unmarshall
-	// TODO:
 
 	var report *WeatherReport = nil
 
