@@ -179,7 +179,8 @@ func unmarshallWeatherResponse(response string) ([]WeatherReport, error) {
 
 func getWeatherReport(city string) (WeatherReport, error) {
 	time.Sleep(2 * time.Second)
-	shouldFail := rand.Float32() < 0.5
+	failChance := float32(0.8)
+	shouldFail := rand.Float32() < failChance
 
 	if shouldFail {
 		return WeatherReport{}, errors.New("Failed to get the Weather Report!")
@@ -222,9 +223,17 @@ func main() {
 
 		city := "Armenia"
 		fmt.Printf("Getting all weather report from %s...\n", city)
-		report, err := getWeatherReport(city)
-		if err != nil {
-			panic(err)
+		var report WeatherReport
+		for i := range 5 {
+			response, err := getWeatherReport(city)
+			if err == nil {
+				report = response
+				break
+			} else if i == 4 {
+				log.Panic("Max retries exceeded", err)
+			}
+
+			fmt.Println("Failed to get weather report, retrying...")
 		}
 		fmt.Printf("Done getting report!\nCity:\t%s\nTemperature:\t%f\nCondition:\t%s\n", report.City, report.Temperature, report.Condition)
 	}()
